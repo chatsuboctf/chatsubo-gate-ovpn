@@ -1,0 +1,40 @@
+version: '3.5'
+
+services:
+  openvpn:
+    cap_add:
+     - NET_ADMIN
+    image: kylemanna/openvpn
+    ports:
+     - "1194:1194/udp"
+    restart: always
+    environment:
+      - EASYRSA_PASSIN=pass:${CA_PASS:-changeme}
+    volumes:
+     - ./openvpn-data:/etc/openvpn
+    networks:
+        chatsubo-gate:
+        default:
+
+  gate:
+    build: .
+    user: root
+    restart: always
+    ports:
+      - "${CHATSUBO_GATE_PORT:-7474}:8000"
+    environment:
+      - FLASK_ENV=production
+      - CHATSUBO_DATABASE_URL=sqlite:///data/chatsubo-gate.db
+    volumes:
+      - ./config.yml:/opt/chatsubo-gate/config.yml:ro
+      - ./certs:/opt/chatsubo-gate/certs:ro
+      - ./data/:/opt/chatsubo-gate/app/data/
+      - ./openvpn-data:/etc/openvpn
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+        default:
+
+networks:
+    chatsubo-gate:
+      name: chatsubo-gate
+    default:
